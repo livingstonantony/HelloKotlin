@@ -8,16 +8,16 @@
  *
  * Why lazyMessage: () -> Any ?
  *
- * - Message is provided as a lambda
- * - Lambda executes ONLY when condition fails
- * - No string or object created when condition passes
+ * - The message is provided as a lambda.
+ * - The lambda is executed ONLY when the condition fails.
+ * - No string or object is created when the condition passes.
  *
- * JVM Optimization:
+ * JVM Optimizations:
  * - inline -> no function call overhead
  * - no lambda object allocation
  *
  * Result:
- * Zero-cost abstraction when validation succeeds.
+ * A zero-cost abstraction when validation succeeds.
  */
 inline fun requireLazy(
     value: Boolean,
@@ -32,19 +32,23 @@ inline fun requireLazy(
 }
 
 /**
- * Old way that does function call overhead
+ * Non-lazy version (old-style approach).
+ *
+ * The message is evaluated BEFORE calling this function,
+ * even when the condition is true.
+ *
+ * This causes unnecessary computation and object creation.
  */
-fun requireLazy(
+fun requireEager(
     value: Boolean,
-    lazyMessage: Any
+    message: Any
 ) {
     // FAST PATH
     if (value) return
 
     // SLOW PATH
-    throw IllegalArgumentException(lazyMessage.toString())
+    throw IllegalArgumentException(message.toString())
 }
-
 
 /**
  * Simulates an expensive message creation.
@@ -55,25 +59,23 @@ fun expensiveMessage(): String {
 }
 
 /**
- * Kotlin program entry point
+ * Kotlin program entry point.
  */
 fun main() {
 
     val number = 10
 
+    println("expensiveMessage() IS called")
+    // expensiveMessage() is called even though number is positive
+    requireEager(number > 0, "$number ${expensiveMessage()}")
 
-    println("expensiveMessage() is called")
-    // expensiveMessage() is called
-    requireLazy(number > 0, "$number ${expensiveMessage()}") // expensiveMessage() is called eventhough number is positive
-
-
+    println()
 
     println("expensiveMessage() is NOT called")
-    // expensiveMessage() is NOT called
+    // expensiveMessage() is NOT called when number is positive
     requireLazy(number > 0) {
         "$number ${expensiveMessage()}"
     }
-
 
     // Uncomment to test failure case
     /*
@@ -85,12 +87,10 @@ fun main() {
 }
 
 /*
-OUTPUT when number = 10
+EXPECTED OUTPUT
 
-Program continues normally
-
-OUTPUT when invalid = -5
-
+expensiveMessage() IS called
 Computing error message...
-Exception in thread "main" java.lang.IllegalArgumentException: Value must be positive
+
+expensiveMessage() is NOT called
 */
